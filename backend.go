@@ -1,17 +1,12 @@
-package backend
+package sqlite3_backend
 
 /*
 #cgo CFLAGS: -std=gnu99
 
 #cgo CFLAGS: -DHAVE_USLEEP=1
 
-#cgo CFLAGS: -DSQLITE_DQS=0
 #cgo CFLAGS: -DSQLITE_ALLOW_URI_AUTHORITY
-#cgo CFLAGS: -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT
-#cgo CFLAGS: -DSQLITE_MAX_ATTACHED=100
-
 #cgo CFLAGS: -DSQLITE_ENABLE_DBPAGE_VTAB
-#cgo CFLAGS: -DSQLITE_DEFAULT_FOREIGN_KEYS
 #cgo CFLAGS: -DSQLITE_ENABLE_DBSTAT_VTAB
 #cgo CFLAGS: -DSQLITE_ENABLE_BYTECODE_VTAB
 
@@ -28,21 +23,39 @@ import "unsafe"
 
 type Backend struct{}
 
-func NewBackend() *Backend {
-	return &Backend{}
-}
-
-// Type conversions
-
-func (b *Backend) CharPtr(p unsafe.Pointer) unsafe.Pointer {
-	return p
-}
-
-func (b *Backend) StringData(s string) unsafe.Pointer {
-	return unsafe.Pointer(unsafe.StringData(s))
-}
-
 // Database operations
+
+func (b *Backend) OpenReadWrite() int {
+	return C.SQLITE_OPEN_READWRITE
+}
+
+func (b *Backend) OpenCreate() int {
+	return C.SQLITE_OPEN_CREATE
+}
+
+func (b *Backend) OpenNoMutex() int {
+	return C.SQLITE_OPEN_NOMUTEX
+}
+
+func (b *Backend) OpenFullMutex() int {
+	return C.SQLITE_OPEN_FULLMUTEX
+}
+
+func (b *Backend) OpenURI() int {
+	return C.SQLITE_OPEN_URI
+}
+
+func (b *Backend) OpenReadOnly() int {
+	return C.SQLITE_OPEN_READONLY
+}
+
+func (b *Backend) OpenMemory() int {
+	return C.SQLITE_OPEN_MEMORY
+}
+
+func (b *Backend) OpenExtendedResultCode() int {
+	return C.SQLITE_OPEN_EXRESCODE
+}
 
 func (b *Backend) OpenV2(filename unsafe.Pointer, ppDb unsafe.Pointer, flags int, zVfs unsafe.Pointer) int {
 	return int(C.sqlite3_open_v2(
@@ -61,10 +74,6 @@ func (b *Backend) Exec(db unsafe.Pointer, sql unsafe.Pointer) int {
 	return int(C.sqlite3_exec((*C.sqlite3)(db), (*C.char)(sql), nil, nil, nil))
 }
 
-func (b *Backend) ExtendedResultCodes(db unsafe.Pointer, onoff int) int {
-	return int(C.sqlite3_extended_result_codes((*C.sqlite3)(db), C.int(onoff)))
-}
-
 // Statement operations
 
 func (b *Backend) PrepareV2(db unsafe.Pointer, zSql unsafe.Pointer, ppStmt unsafe.Pointer) int {
@@ -75,6 +84,18 @@ func (b *Backend) PrepareV2(db unsafe.Pointer, zSql unsafe.Pointer, ppStmt unsaf
 		(**C.sqlite3_stmt)(ppStmt),
 		nil,
 	))
+}
+
+func (b *Backend) Step(stmt unsafe.Pointer) int {
+	return int(C.sqlite3_step((*C.sqlite3_stmt)(stmt)))
+}
+
+func (b *Backend) Reset(stmt unsafe.Pointer) int {
+	return int(C.sqlite3_reset((*C.sqlite3_stmt)(stmt)))
+}
+
+func (b *Backend) Finalize(stmt unsafe.Pointer) int {
+	return int(C.sqlite3_finalize((*C.sqlite3_stmt)(stmt)))
 }
 
 func (b *Backend) BindInt64(stmt unsafe.Pointer, index int, value int64) int {
@@ -105,18 +126,6 @@ func (b *Backend) BindText(stmt unsafe.Pointer, index int, value unsafe.Pointer,
 
 func (b *Backend) BindNull(stmt unsafe.Pointer, index int) int {
 	return int(C.sqlite3_bind_null((*C.sqlite3_stmt)(stmt), C.int(index)))
-}
-
-func (b *Backend) Step(stmt unsafe.Pointer) int {
-	return int(C.sqlite3_step((*C.sqlite3_stmt)(stmt)))
-}
-
-func (b *Backend) Reset(stmt unsafe.Pointer) int {
-	return int(C.sqlite3_reset((*C.sqlite3_stmt)(stmt)))
-}
-
-func (b *Backend) Finalize(stmt unsafe.Pointer) int {
-	return int(C.sqlite3_finalize((*C.sqlite3_stmt)(stmt)))
 }
 
 // Column operations
@@ -162,6 +171,16 @@ func (b *Backend) ErrStr(rc int) string {
 	return C.GoString(C.sqlite3_errstr(C.int(rc)))
 }
 
+// Type conversions
+
+func (b *Backend) CharPtr(p unsafe.Pointer) unsafe.Pointer {
+	return p
+}
+
+func (b *Backend) StringData(s string) unsafe.Pointer {
+	return unsafe.Pointer(unsafe.StringData(s))
+}
+
 // Constants
 
 func (b *Backend) ResultOk() int {
@@ -178,20 +197,4 @@ func (b *Backend) ResultDone() int {
 
 func (b *Backend) ResultNull() int {
 	return C.SQLITE_NULL
-}
-
-func (b *Backend) OpenReadWrite() int {
-	return C.SQLITE_OPEN_READWRITE
-}
-
-func (b *Backend) OpenCreate() int {
-	return C.SQLITE_OPEN_CREATE
-}
-
-func (b *Backend) OpenNoMutex() int {
-	return C.SQLITE_OPEN_NOMUTEX
-}
-
-func (b *Backend) OpenURI() int {
-	return C.SQLITE_OPEN_URI
 }
